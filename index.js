@@ -9,7 +9,10 @@ const port = process.env.PORT || 5000;
 
 // Middlewares //
 app.use(cors({
-  origin: ['http://localhost:3000'],
+  origin: ['http://localhost:3000',
+    "https://college-mate-client.vercel.app"
+  ],
+  // secure: process.env.NODE_ENV === 'production',
   credentials: true,
 }));
 app.use(express.json());
@@ -28,7 +31,7 @@ const verifyToken = (req, res, next) => {
       return res.status(401).send({ message: "Unauthorized access!!" });
     }
     console.log("This is from decoded", decoded); // { email: 'tester1@gmail.com', iat: 1751639202, exp: 1751642802 }
-    req.user = decoded;   
+    req.user = decoded;
     next();
   })
 }
@@ -59,28 +62,28 @@ async function run() {
       res
         .cookie('token', token, {   // Client er browser e ekta cookie set kora hocche. jar name 'token' and value holo je token ta create hoise oita //
           httpOnly: true, // Ei cookie only server access korte parbe, js diye access kora jabe na
-          secure: false   // http diye o cookie ta pathano jabe, https must na 
+          secure: process.env.NODE_ENV === 'production'  // http diye o cookie ta pathano jabe, https must na 
         })
         .send({ success: true });
     });
 
-    app.post('/logout', async(req, res) => {
+    app.post('/logout', async (req, res) => {
       res
-      .clearCookie('token', {
-        httpOnly: true,
-        secure: false
-      })
-      .send({success: "Cookie removed successfully with logout"})
+        .clearCookie('token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production'
+        })
+        .send({ success: "Cookie removed successfully with logout" })
     })
 
     // ------------------------------ //
 
     // Get all colleges from collegesCollection //
-    app.get('/colleges', async(req, res) => {
+    app.get('/colleges', async (req, res) => {
       const search = req.query.search || "";
       const filter = {
         collegeName: {
-          $regex: search, 
+          $regex: search,
           $options: "i"
         }
       }
@@ -89,9 +92,9 @@ async function run() {
     });
 
     // Get a specific college from collegesCollection //
-    app.get('/colleges/:id', async(req, res) => {
+    app.get('/colleges/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await collegesCollection.findOne(query);
       res.send(result);
     });
@@ -99,31 +102,31 @@ async function run() {
     // ------------------------------------------ //
 
     // Add/Post an admission apply to admissionsCollections //
-    app.post('/admissions', async(req, res) => {
+    app.post('/admissions', verifyToken, async (req, res) => {
       const apply = req.body;
       const result = await admissionsCollection.insertOne(apply);
       res.send(result);
     });
 
     // Get application of a specific email (user) //
-    app.get('/admission/:email', async(req, res) => {
-      const email = req. params.email;
-      const query = {email: email};
+    app.get('/admission/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
       const result = await admissionsCollection.findOne(query);
       res.send(result);
-    }); 
+    });
 
     // ---------------------------------------- //
 
     // Add / Post a review to reviewsCollection //
-    app.post('/reviews', async(req, res) => {
+    app.post('/reviews', verifyToken, async (req, res) => {
       const review = req.body;
       const result = await reviewsCollection.insertOne(review);
       res.send(result);
     });
 
     // Get all reviws fron reviewsCollection //
-    app.get('/reviews', async(req, res) => {
+    app.get('/reviews', async (req, res) => {
       const result = await reviewsCollection.find().toArray();
       res.send(result);
     })
@@ -132,7 +135,7 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
   } finally {
